@@ -1,19 +1,22 @@
 package dto.response;
 
-import enums.Users;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.OffsetDateTime;
+
 @Getter
 @Setter
-public class UsuarioResponse {
+public class ClienteResponse {
 
     private Long id;
 
     private String nome;
 
+    private String telefone;
+
     private String email;
 
-    private Users role;
+    private OffsetDateTime criadoEm;
 
 }
