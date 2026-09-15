@@ -29,5 +29,5 @@ public class Cliente {
     @Email(message = "O e-mail é invalido!")
     @Column(nullable = false)
     private String email;
-    
+
 }
