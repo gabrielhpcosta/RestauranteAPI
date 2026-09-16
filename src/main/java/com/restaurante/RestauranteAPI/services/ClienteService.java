@@ -59,17 +59,20 @@ public class ClienteService {
             throw new ConflictException("E-mail já cadastrado");
         }
 
+        ViaCepResponse endereco = viaCepService.buscarEndereco(request.getCep());
+
         Cliente cliente = clienteMapper.toEntity(request);
-        cliente.setCpf(cpf);
-        cliente.setEmail(email);
-        cliente.setAtivo(true);
-        if (request.getCep() != null && !request.getCep().isBlank()) {
-            ViaCepResponse endereco = viaCepService.buscarEndereco(request.getCep());
-            cliente.setCep(endereco.getCep());
-        } else {
-            cliente.setCep(null);
-        }
-        return clienteMapper.toResponse(clienteRepository.save(cliente));
+        cliente.setCep(endereco.getCep());
+        cliente.setLogradouro(endereco.getLogradouro());
+        cliente.setBairro(endereco.getBairro());
+        cliente.setCidade(endereco.getLocalidade());
+        cliente.setUf(endereco.getUf());
+
+        Cliente clienteSalvo = clienteRepository.save(cliente);
+
+        log.info("Cliente salvo com sucesso, ID {}", clienteSalvo.getId());
+
+        return clienteMapper.toResponse(clienteSalvo);
     }
 
     @CacheEvict(value = {"clientes", "cliente"}, allEntries = true)

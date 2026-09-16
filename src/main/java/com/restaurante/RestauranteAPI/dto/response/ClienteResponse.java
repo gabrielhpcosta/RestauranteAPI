@@ -19,8 +19,16 @@ public class ClienteResponse {
 
     private String email;
 
-    private Boolean ativo;
-
     private String cep;
+
+    private String logradouro;
+
+    private String bairro;
+
+    private String cidade;
+
+    private String uf;
+
+    private Boolean ativo;
 
 }

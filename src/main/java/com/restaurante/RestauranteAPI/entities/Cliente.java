@@ -42,6 +42,10 @@ public class Cliente {
     private Boolean ativo = true;
 
     private String cep;
+    private String logradouro;
+    private String bairro;
+    private String cidade;
+    private String uf;
 
     @PreUpdate
     public void normalizarDados() {
