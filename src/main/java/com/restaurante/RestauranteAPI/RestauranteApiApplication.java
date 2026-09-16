@@ -5,7 +5,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Map;
+import org.springframework.cache.annotation.EnableCaching;
 
+@EnableCaching
 @SpringBootApplication
 public class RestauranteApiApplication {
 
@@ -16,10 +18,10 @@ public class RestauranteApiApplication {
 				.load();
 
 		Map<String, Object> properties = Map.of(
-				"spring.datasource.url", dotenv.get("DB_URL"),
-				"spring.datasource.username", dotenv.get("DB_USERNAME"),
-				"spring.datasource.password", dotenv.get("DB_PASSWORD"),
-				"api.security.token.secret", dotenv.get("JWT_SECRET")
+				"spring.datasource.url", obrigatoria(dotenv, "DB_URL"),
+				"spring.datasource.username", obrigatoria(dotenv, "DB_USERNAME"),
+				"spring.datasource.password", obrigatoria(dotenv, "DB_PASSWORD"),
+				"api.security.token.secret", obrigatoria(dotenv, "JWT_SECRET")
 		);
 
 		SpringApplication app = new SpringApplication(RestauranteApiApplication.class);
@@ -28,4 +30,11 @@ public class RestauranteApiApplication {
 
 		app.run(args);
 	}
+    private static String obrigatoria(Dotenv dotenv, String nome) {
+        String valor = dotenv.get(nome);
+        if (valor == null || valor.isBlank()) {
+            throw new IllegalStateException("Variável obrigatória não configurada: " + nome);
+        }
+        return valor;
+    }
 }
