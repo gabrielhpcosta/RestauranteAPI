@@ -30,6 +30,6 @@ public class Mesa {
     private Integer capacidade;
 
     @Column(nullable = false)
-    private Boolean ativo = true;
+    private Boolean disponivel = true;
 
 }
