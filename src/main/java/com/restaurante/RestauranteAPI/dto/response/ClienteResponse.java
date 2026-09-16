@@ -19,8 +19,6 @@ public class ClienteResponse {
 
     private String email;
 
-    private OffsetDateTime criadoEm;
-
     private Boolean ativo;
 
     private String cep;

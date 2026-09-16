@@ -43,15 +43,6 @@ public class Cliente {
 
     private String cep;
 
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime criadoEm;
-
-    @PrePersist
-    public void preencherData() {
-        this.criadoEm = OffsetDateTime.now();
-        normalizarDados();
-    }
-
     @PreUpdate
     public void normalizarDados() {
         if (email != null) email = email.trim().toLowerCase(Locale.ROOT);

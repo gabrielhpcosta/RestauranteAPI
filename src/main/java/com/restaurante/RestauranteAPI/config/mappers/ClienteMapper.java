@@ -11,7 +11,6 @@ public interface ClienteMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "ativo", ignore = true)
-    @Mapping(target = "criadoEm", ignore = true)
     Cliente toEntity(ClienteRequest request);
 
     ClienteResponse toResponse(Cliente cliente);

@@ -72,5 +72,30 @@ public class ClienteService {
         return clienteMapper.toResponse(clienteRepository.save(cliente));
     }
 
+    @CacheEvict(value = {"clientes", "cliente"}, allEntries = true)
+    public ClienteResponse atualizar(Long id, ClienteRequest request){
+        log.info("Atualizando clientes com o ID {}", id);
 
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new NotFound("Cliente não encontrado"));
+
+        cliente.setNome(request.getNome());
+        cliente.setCpf(request.getCpf());
+        cliente.setEmail(request.getEmail());
+        cliente.setTelefone(request.getTelefone());
+
+        Cliente clienteAtualizado = clienteRepository.save(cliente);
+
+        return clienteMapper.toResponse(clienteAtualizado);
+    }
+
+    @CacheEvict(value = {"clientes", "cliente"}, allEntries = true)
+    public void deletar (Long id) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new NotFound("Cliente não encontrado"));
+
+        cliente.setAtivo(false);
+
+        Cliente clienteDesativo = clienteRepository.save(cliente);
+    }
 }
