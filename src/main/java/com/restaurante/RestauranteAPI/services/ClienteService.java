@@ -62,6 +62,8 @@ public class ClienteService {
         ViaCepResponse endereco = viaCepService.buscarEndereco(request.getCep());
 
         Cliente cliente = clienteMapper.toEntity(request);
+        cliente.setCpf(cpf);
+        cliente.setEmail(email);
         cliente.setCep(endereco.getCep());
         cliente.setLogradouro(endereco.getLogradouro());
         cliente.setBairro(endereco.getBairro());
