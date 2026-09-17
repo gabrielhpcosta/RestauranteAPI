@@ -4,8 +4,10 @@ import com.restaurante.RestauranteAPI.config.mappers.MesaMapper;
 import com.restaurante.RestauranteAPI.dto.request.MesaRequest;
 import com.restaurante.RestauranteAPI.dto.response.MesaResponse;
 import com.restaurante.RestauranteAPI.entities.Mesa;
+import com.restaurante.RestauranteAPI.enums.StatusComanda;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
+import com.restaurante.RestauranteAPI.repositories.ComandaRepository;
 import com.restaurante.RestauranteAPI.repositories.MesaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +23,12 @@ public class MesaService {
 
     private final MesaRepository mesaRepository;
     private final MesaMapper mesaMapper;
+    private final ComandaRepository comandaRepository;
 
-    public MesaService(MesaRepository mesaRepository, MesaMapper mesaMapper) {
+    public MesaService(MesaRepository mesaRepository, MesaMapper mesaMapper, ComandaRepository comandaRepository) {
         this.mesaRepository = mesaRepository;
         this.mesaMapper = mesaMapper;
+        this.comandaRepository = comandaRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(MesaService.class);
@@ -67,15 +71,34 @@ public class MesaService {
         Mesa mesa = mesaRepository.findById(id)
                 .orElseThrow(() -> new NotFound("Mesa não encontrada"));
 
+        if (!Objects.equals(mesa.getNumero(), request.getNumero())
+            && mesaRepository.existsByNumero(request.getNumero())) {
+            throw new ConflictException("Já existe uma mesa com esse número");
+        }
+
         mesa.setNumero(request.getNumero());
-
-        !Objects.equals(mesa.getNumero(), request.getNumero())
-
         mesa.setCapacidade(request.getCapacidade());
 
         Mesa mesaAtualizada = mesaRepository.save(mesa);
 
         return mesaMapper.toResponse(mesaAtualizada);
+    }
+
+    @CacheEvict(value = {"mesas", "mesa"}, allEntries = true)
+    public void deletar(Long id) {
+        log.info("Desativando mesa com o ID {}", id);
+
+        Mesa mesa = mesaRepository.findById(id)
+                .orElseThrow(() -> new NotFound("Mesa não encontrada"));
+
+        if (comandaRepository.existsByMesa_IdAndStatus(id, StatusComanda.ABERTA)) {
+            throw new ConflictException(
+                    "Não é possível desativar uma mesa com comanda aberta"
+            );
+        }
+
+        mesa.setDisponivel(false);
+        mesaRepository.save(mesa);
     }
 
 }
