@@ -34,9 +34,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .disabled(!usuario.getAtivo())
                 .build();
 
-        System.out.println(">>> USUARIO: " + userDetails.getUsername());
-        System.out.println(">>> AUTHORITIES: " + userDetails.getAuthorities());
-
         return userDetails;
     }
 
