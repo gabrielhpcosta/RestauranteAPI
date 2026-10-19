@@ -1,6 +1,7 @@
 package com.restaurante.RestauranteAPI.services;
 
 import com.restaurante.RestauranteAPI.config.mappers.ComandaMapper;
+import com.restaurante.RestauranteAPI.dto.request.CancelarComandaRequest;
 import com.restaurante.RestauranteAPI.dto.request.ComandaRequest;
 import com.restaurante.RestauranteAPI.dto.response.ComandaResponse;
 import com.restaurante.RestauranteAPI.entities.Cliente;
@@ -21,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -31,19 +34,21 @@ public class ComandaService {
     private final MesaRepository mesaRepository;
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
+    private final Clock clock;
 
 
-    public ComandaService(ComandaRepository comandaRepository, ComandaMapper comandaMapper, MesaRepository mesaRepository, ClienteRepository clienteRepository, UsuarioRepository usuarioRepository) {
+    public ComandaService(ComandaRepository comandaRepository, ComandaMapper comandaMapper, MesaRepository mesaRepository, ClienteRepository clienteRepository, UsuarioRepository usuarioRepository, Clock clock, Clock clock1) {
         this.comandaRepository = comandaRepository;
         this.comandaMapper = comandaMapper;
         this.mesaRepository = mesaRepository;
         this.clienteRepository = clienteRepository;
         this.usuarioRepository = usuarioRepository;
+        this.clock = clock1;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ComandaService.class);
 
-    @Cacheable("comanda")
+    @Cacheable("comandas")
     public List<ComandaResponse> buscarTodos(){
         log.info("Buscando todas as comandas");
 
@@ -52,7 +57,7 @@ public class ComandaService {
                 .toList();
     }
 
-    @Cacheable(value = "cliente", key = "#id")
+    @Cacheable(value = "comanda", key = "#id")
     public ComandaResponse buscarPorId(Long id){
         log.info("Buscando comanda por id, ID: {}", id);
         Comanda comanda = comandaRepository.findById(id)
@@ -65,27 +70,13 @@ public class ComandaService {
     public ComandaResponse salvar(ComandaRequest request, String emailUsuarioAutenticado){
         log.info("Abrindo comanda para a mesa {}", request.getMesaId());
 
-        Mesa mesa = mesaRepository.findById(request.getMesaId())
-                .orElseThrow(() -> new NotFound("Mesa não encontrada"));
-
-        if(!Boolean.TRUE.equals(mesa.getDisponivel())) {
-            throw new ConflictException("A mesa está desativada");
-        }
+        Mesa mesa = buscarMesaDisponivel(request.getMesaId());
 
         if (comandaRepository.existsByMesa_IdAndStatus(mesa.getId(), StatusComanda.ABERTA)) {
             throw new ConflictException("A mesa já possui uma comanda aberta");
         }
 
-        Cliente cliente = null;
-        if (request.getClienteId() != null) {
-            cliente = clienteRepository.findById(request.getClienteId())
-                    .orElseThrow(() -> new NotFound("Cliente não encontrado"));
-
-
-            if (!Boolean.TRUE.equals(cliente.getAtivo())) {
-                throw new ConflictException("O cliente está inativo");
-            }
-        }
+        Cliente cliente = buscarClienteAtivo(request.getClienteId());
 
         Usuario usuario = usuarioRepository
                 .findByEmailIgnoreCase(emailUsuarioAutenticado)
@@ -105,9 +96,73 @@ public class ComandaService {
         return comandaMapper.toResponse(comandaSalva);
     }
 
-//    @CacheEvict(value = {"comandas", "comanda"}, allEntries = true)
-//    public ComandaResponse atualizar(ComandaRequest request, Long id) {
-//        log.info("Atualizando comanda ID: {}", id);
-//    }
+    @Transactional
+    @CacheEvict(value = {"comandas", "comanda"}, allEntries = true)
+    public ComandaResponse atualizar(Long id, ComandaRequest request) {
+        log.info("Atualizando comanda ID: {}", id);
+
+        Comanda comanda = buscarComandaAberta(id);
+
+        if (!comanda.getMesa().getId().equals(request.getMesaId())) {
+            Mesa novaMesa = buscarMesaDisponivel(request.getMesaId());
+
+            if (comandaRepository.existsByMesa_IdAndStatus(novaMesa.getId(), StatusComanda.ABERTA)) {
+                throw new ConflictException("A nova mesa já possui uma comanda aberta");
+            }
+            comanda.setMesa(novaMesa);
+        }
+
+        comanda.setCliente(buscarClienteAtivo(request.getClienteId()));
+
+        return comandaMapper.toResponse(comandaRepository.save(comanda));
+    }
+
+    @Transactional
+    @CacheEvict(value = {"comandas", "comanda"}, allEntries = true)
+    public ComandaResponse cancelar(Long id, CancelarComandaRequest request) {
+        log.info("Cancelando comanda com ID {}", id);
+
+        Comanda comanda = buscarComandaAberta(id);
+
+        comanda.setStatus(StatusComanda.CANCELADA);
+        comanda.setEncerradaEm(OffsetDateTime.now(clock));
+        comanda.setMotivoCancelamento(request.getMotivo());
+
+        return comandaMapper.toResponse(comandaRepository.save(comanda));
+
+    }
+
+    private Comanda buscarComandaAberta(Long id) {
+        Comanda comanda = comandaRepository.findById(id)
+                .orElseThrow(() -> new NotFound("Comanda não encontrada"));
+
+        if (comanda.getStatus() != StatusComanda.ABERTA) {
+            throw new ConflictException("Só é possivel alterar comandas abertas");
+        }
+        return comanda;
+    }
+
+    private Mesa buscarMesaDisponivel(Long mesaId) {
+        Mesa mesa = mesaRepository.findById(mesaId)
+                .orElseThrow(() -> new NotFound("Mesa não encontrada"));
+
+        if (!Boolean.TRUE.equals(mesa.getDisponivel())) {
+            throw new ConflictException("A mesa está desativada");
+        }
+        return mesa;
+    }
+
+    private Cliente buscarClienteAtivo(Long clienteId) {
+        if (clienteId == null) {
+            return null;
+        }
+        Cliente cliente = clienteRepository.findById(clienteId)
+                .orElseThrow(() -> new NotFound("Cliente não encontrado"));
+
+        if (!Boolean.TRUE.equals(cliente.getAtivo())) {
+            throw new ConflictException("O cliente está inativo");
+        }
+        return cliente;
+    }
 
 }

@@ -19,4 +19,5 @@ public class ComandaResponse {
     private StatusComanda status;
     private OffsetDateTime abertaEm;
     private OffsetDateTime encerradaEm;
+    private String motivoCancelamento;
 }

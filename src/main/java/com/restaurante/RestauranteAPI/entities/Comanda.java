@@ -43,6 +43,8 @@ public class Comanda {
     @Column(nullable = false)
     private StatusComanda status;
 
+    private String motivoCancelamento;
+
     @Column(nullable = false, updatable = false)
     private OffsetDateTime abertaEm;
 

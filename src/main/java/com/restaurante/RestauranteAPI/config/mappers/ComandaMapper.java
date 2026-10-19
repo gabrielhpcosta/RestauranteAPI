@@ -16,12 +16,14 @@ public interface ComandaMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "abertaEm", ignore = true)
     @Mapping(target = "encerradaEm", ignore = true)
+    @Mapping(target = "motivoCancelamento", ignore = true)
     Comanda toEntity(ComandaRequest request);
     @Mapping(target = "mesaId", source = "mesa.id")
     @Mapping(target = "numeroMesa", source = "mesa.numero")
     @Mapping(target = "clienteId", source = "cliente.id")
     @Mapping(target = "nomeCliente", source = "cliente.nome")
     @Mapping(target = "abertaPorId", source = "abertaPor.id")
+
     ComandaResponse toResponse(Comanda comanda);
 
 
