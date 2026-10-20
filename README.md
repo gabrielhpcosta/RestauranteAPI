@@ -4,7 +4,7 @@ API REST para gestão de restaurante, desenvolvida com **Java 17 e Spring Boot**
 
 O objetivo é cobrir o fluxo de um restaurante: mesas, comandas, pedidos, cardápio, estoque de ingredientes e pagamentos, com autenticação via **JWT** e controle de acesso por perfil de usuário.
 
-> 🚧 **Projeto em desenvolvimento.** Autenticação, usuários, clientes e mesas já estão implementados. As demais partes (comandas, pedidos, produtos, estoque e pagamentos) já têm entidades, repositórios e serviços modelados, e os endpoints estão sendo construídos.
+> 🚧 **Projeto em desenvolvimento.** Autenticação, usuários, clientes, mesas, comandas, categoria, e produto já estão implementados. As demais partes (pedidos, estoque e pagamentos) já têm entidades, repositórios e serviços modelados, e os endpoints estão sendo construídos.
 
 ## Tecnologias
 
@@ -21,6 +21,7 @@ O objetivo é cobrir o fluxo de um restaurante: mesas, comandas, pedidos, cardá
 - Springdoc OpenAPI (Swagger)
 - Spring Boot Actuator
 - Maven
+- -Docker
 
 ## Funcionalidades
 
@@ -36,6 +37,7 @@ O objetivo é cobrir o fluxo de um restaurante: mesas, comandas, pedidos, cardá
 - Tratamento global de exceções
 - Logs da aplicação em arquivo (`logs/api-restaurante.log`)
 - Documentação interativa com Swagger
+- CRUD de produtos, comandas e categoria
 
 ### Em desenvolvimento
 
@@ -47,7 +49,7 @@ O objetivo é cobrir o fluxo de um restaurante: mesas, comandas, pedidos, cardá
 
 ## Endpoints
 
-Base URL: `http://localhost:8080`
+Base URL: `http://localhost:8082`
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -76,7 +78,7 @@ Authorization: Bearer <access_token>
 A documentação completa fica disponível no Swagger, com a aplicação rodando:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8082/swagger-ui/index.html
 ```
 
 ## Arquitetura
@@ -97,10 +99,12 @@ src/main/java/com/restaurante/RestauranteAPI
 
 ## Como executar
 
+- Subir o banco com "docker compose up -d"
+
 ### Pré-requisitos
 
 - Java 17
-- PostgreSQL
+- Docker
 - Git
 
 ### 1. Clonar o repositório
@@ -137,7 +141,7 @@ Linux/macOS:
 ./mvnw spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`.
+A API sobe em `http://localhost:8082`.
 
 ## Autor
 
