@@ -30,7 +30,7 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.buscarPorId(id));
     }
 
-    @PutMapping("/id")
+    @PutMapping("/{id}")
     public ResponseEntity<ClienteResponse> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequest request){
         ClienteResponse clienteAtualizado = clienteService.atualizar(id, request);
         return ResponseEntity.ok(clienteAtualizado);
@@ -42,7 +42,7 @@ public class ClienteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(clienteSalvo);
     }
 
-    @DeleteMapping("/id")
+    @DeleteMapping("/{id}")
         public ResponseEntity<Void> deletar(@PathVariable Long id) {
         clienteService.deletar(id);
         return ResponseEntity.noContent().build();
