@@ -9,6 +9,7 @@ import com.restaurante.RestauranteAPI.entities.Comanda;
 import com.restaurante.RestauranteAPI.entities.Mesa;
 import com.restaurante.RestauranteAPI.entities.Usuario;
 import com.restaurante.RestauranteAPI.enums.StatusComanda;
+import com.restaurante.RestauranteAPI.exceptions.BadRequestException;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
 import com.restaurante.RestauranteAPI.repositories.ClienteRepository;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -35,15 +37,19 @@ public class ComandaService {
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final Clock clock;
+    private final PagamentoService pagamentoService;
 
 
-    public ComandaService(ComandaRepository comandaRepository, ComandaMapper comandaMapper, MesaRepository mesaRepository, ClienteRepository clienteRepository, UsuarioRepository usuarioRepository, Clock clock, Clock clock1) {
+    public ComandaService(ComandaRepository comandaRepository, ComandaMapper comandaMapper, MesaRepository mesaRepository,
+                          ClienteRepository clienteRepository,
+                          UsuarioRepository usuarioRepository, Clock clock, PagamentoService pagamentoService) {
         this.comandaRepository = comandaRepository;
         this.comandaMapper = comandaMapper;
         this.mesaRepository = mesaRepository;
         this.clienteRepository = clienteRepository;
         this.usuarioRepository = usuarioRepository;
-        this.clock = clock1;
+        this.clock = clock;
+        this.pagamentoService = pagamentoService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ComandaService.class);
@@ -129,7 +135,25 @@ public class ComandaService {
         comanda.setMotivoCancelamento(request.getMotivo());
 
         return comandaMapper.toResponse(comandaRepository.save(comanda));
+    }
 
+    @Transactional
+    @CacheEvict(value = {"comandas", "comanda"}, allEntries = true)
+    public ComandaResponse fechar(Long id) {
+        log.info("Fechando comanda com o ID {}", id);
+
+        Comanda comanda = buscarComandaAberta(id);
+
+        BigDecimal restante = pagamentoService.calcularRestante(comanda.getId());
+
+        if (restante.compareTo(BigDecimal.ZERO) !=0) {
+            throw new ConflictException("Ainda falta pagar R$ " + restante);
+        }
+
+        comanda.setStatus(StatusComanda.FECHADA);
+        comanda.setEncerradaEm(OffsetDateTime.now(clock));
+
+        return comandaMapper.toResponse(comandaRepository.save(comanda));
     }
 
     private Comanda buscarComandaAberta(Long id) {

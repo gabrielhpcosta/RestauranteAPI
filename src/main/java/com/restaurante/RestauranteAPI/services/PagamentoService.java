@@ -27,6 +27,10 @@ import java.util.Optional;
 @Service
 public class PagamentoService {
 
+    public BigDecimal calcularRestante(Long comandaId) {
+        return calcularTotalConsumido(comandaId).subtract(calcularTotalPago(comandaId));
+    }
+
     private final PagamentoRepository pagamentoRepository;
     private final PagamentoMapper pagamentoMapper;
     private final ComandaRepository comandaRepository;
