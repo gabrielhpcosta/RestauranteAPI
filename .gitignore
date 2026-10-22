@@ -3,6 +3,7 @@ target/
 .env
 logs/
 /postman
+.postman/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
