@@ -49,4 +49,9 @@ public class ComandaController {
         ComandaResponse comandaCancelada = comandaService.cancelar(id, request);
         return ResponseEntity.ok(comandaCancelada);
     }
+
+    @PutMapping("/{id}/fechar")
+    public ResponseEntity<ComandaResponse> fechar(@PathVariable Long id) {
+        return ResponseEntity.ok(comandaService.fechar(id));
+    }
 }
