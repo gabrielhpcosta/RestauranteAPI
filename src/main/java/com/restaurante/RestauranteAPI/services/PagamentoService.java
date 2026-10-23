@@ -1,6 +1,7 @@
 package com.restaurante.RestauranteAPI.services;
 
 import com.restaurante.RestauranteAPI.config.mappers.PagamentoMapper;
+import com.restaurante.RestauranteAPI.dto.request.EstornarPagamentoRequest;
 import com.restaurante.RestauranteAPI.dto.request.PagamentoRequest;
 import com.restaurante.RestauranteAPI.dto.response.PagamentoResponse;
 import com.restaurante.RestauranteAPI.entities.Comanda;
@@ -21,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,15 +39,17 @@ public class PagamentoService {
     private final ComandaRepository comandaRepository;
     private final UsuarioRepository usuarioRepository;
     private final ItemPedidoRepository itemPedidoRepository;
+    private final Clock clock;
 
     public PagamentoService(PagamentoRepository pagamentoRepository, PagamentoMapper pagamentoMapper,
                             ComandaRepository comandaRepository, UsuarioRepository usuarioRepository,
-                            ItemPedidoRepository itemPedidoRepository) {
+                            ItemPedidoRepository itemPedidoRepository, Clock clock) {
         this.pagamentoRepository = pagamentoRepository;
         this.pagamentoMapper = pagamentoMapper;
         this.comandaRepository = comandaRepository;
         this.usuarioRepository = usuarioRepository;
         this.itemPedidoRepository = itemPedidoRepository;
+        this.clock = clock;
     }
 
     private static final Logger log = LoggerFactory.getLogger(PagamentoService.class);
@@ -80,6 +85,33 @@ public class PagamentoService {
         pagamento.setComanda(comanda);
         pagamento.setStatus(StatusPagamento.CONFIRMADO);
         pagamento.setRegistradoPor(usuario);
+
+        return pagamentoMapper.toResponse(pagamentoRepository.save(pagamento));
+    }
+
+    @Transactional
+    public PagamentoResponse estornar(Long id, EstornarPagamentoRequest request,
+                                      String emailUsuarioAutenticado) {
+        log.info("Estornando pagamento {}", id);
+
+        Pagamento pagamento = pagamentoRepository.findById(id)
+                .orElseThrow(() -> new NotFound("Pagamento não encontrado"));
+
+        if (pagamento.getStatus() != StatusPagamento.CONFIRMADO) {
+            throw new ConflictException("Só é possível estornar pagamentos confirmados");
+        }
+
+        if (pagamento.getComanda().getStatus() != StatusComanda.ABERTA) {
+            throw new ConflictException("Não é possivel estornar pagamento de comanda encerrada");
+        }
+
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(emailUsuarioAutenticado)
+                .orElseThrow(() -> new NotFound("Usuário não encontrado"));
+
+        pagamento.setStatus(StatusPagamento.ESTORNADO);
+        pagamento.setEstornadoEm(OffsetDateTime.now(clock));
+        pagamento.setEstornadoPor(usuario);
+        pagamento.setMotivoEstorno(request.getMotivo());
 
         return pagamentoMapper.toResponse(pagamentoRepository.save(pagamento));
     }

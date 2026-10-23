@@ -1,5 +1,6 @@
 package com.restaurante.RestauranteAPI.controllers;
 
+import com.restaurante.RestauranteAPI.dto.request.EstornarPagamentoRequest;
 import com.restaurante.RestauranteAPI.dto.request.PagamentoRequest;
 import com.restaurante.RestauranteAPI.dto.response.PagamentoResponse;
 import com.restaurante.RestauranteAPI.dto.response.PedidoResponse;
@@ -34,6 +35,14 @@ public class PagamentoController {
                                                        @AuthenticationPrincipal UserDetails usuario){
         PagamentoResponse pagamentoSalvo = pagamentoService.registrar(request, usuario.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(pagamentoSalvo);
+    }
+
+    @PutMapping("/{id}/estornar")
+    public ResponseEntity<PagamentoResponse> estornar(@PathVariable Long id,
+                                                      @Valid @RequestBody EstornarPagamentoRequest request,
+                                                      @AuthenticationPrincipal UserDetails usuario) {
+        PagamentoResponse pagamentoEstornado = pagamentoService.estornar(id, request, usuario.getUsername());
+        return ResponseEntity.ok(pagamentoEstornado);
     }
 
 }
