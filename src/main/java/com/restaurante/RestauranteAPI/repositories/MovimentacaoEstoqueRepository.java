@@ -18,4 +18,6 @@ public interface MovimentacaoEstoqueRepository extends JpaRepository<Movimentaca
             Long itemPedidoId,
             TipoMovimentacao tipo
     );
+
+    List<MovimentacaoEstoque> findByIngrediente_IdOrderByCriadoEmDesc(Long ingredienteId);
 }
