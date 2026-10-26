@@ -40,7 +40,7 @@ public class SecurityConfig {
 
                         // USUÁRIOS
                         .requestMatchers(HttpMethod.GET, "/usuarios/**")
-                        .authenticated()
+                        .hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/usuarios")
                         .hasRole("ADMIN")
@@ -63,6 +63,28 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN")
 
                         .requestMatchers(HttpMethod.DELETE, "/clientes/**")
+                        .hasRole("ADMIN")
+
+
+                        // CADASTROS (consultar: qualquer logado / alterar: só ADMIN)
+                        .requestMatchers(HttpMethod.POST,
+                                "/mesas", "/categorias", "/produtos", "/ingredientes", "/receita-itens")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/mesas/**", "/categorias/**", "/produtos/**", "/ingredientes/**", "/receita-itens/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/mesas/**", "/categorias/**", "/produtos/**", "/ingredientes/**", "/receita-itens/**")
+                        .hasRole("ADMIN")
+
+
+                        // ESTOQUE E ESTORNO
+                        .requestMatchers(HttpMethod.POST, "/movimentacoes-estoque")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT, "/pagamentos/*/estornar")
                         .hasRole("ADMIN")
 
 
