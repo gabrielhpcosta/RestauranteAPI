@@ -1,6 +1,5 @@
 package com.restaurante.RestauranteAPI.config.security;
 
-import com.restaurante.RestauranteAPI.entities.Usuario;
 import com.restaurante.RestauranteAPI.repositories.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,6 +9,7 @@ import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -40,11 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println(">>> JWT FILTER: "
-                + request.getMethod()
-                + " "
-                + request.getRequestURI());
-
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -66,8 +61,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (email != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(email);
+            UserDetails userDetails;
+
+            try {
+                userDetails = userDetailsService.loadUserByUsername(email);
+            } catch (UsernameNotFoundException e) {
+                // token de um usuário que não existe mais: segue sem autenticar (vira 401)
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             if (!jwtService.isRefreshToken(token)
                     && jwtService.tokenValido(token, userDetails)) {
@@ -87,11 +89,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext()
                         .setAuthentication(authentication);
 
-                System.out.println(">>> AUTENTICADO: " + SecurityContextHolder.getContext() .getAuthentication() .getAuthorities());
-
-                Usuario usuario = usuarioRepository.findByEmail(userDetails.getUsername())
-                        .orElse(null);
-                MDC.put("id", usuario.getId().toString());
+                usuarioRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                        .ifPresent(usuario -> MDC.put("id", usuario.getId().toString()));
             }
         }
 

@@ -7,6 +7,7 @@ import com.restaurante.RestauranteAPI.dto.request.RefreshTokenRequest;
 import com.restaurante.RestauranteAPI.dto.response.LoginResponse;
 import com.restaurante.RestauranteAPI.services.LoginAttemptService;
 import com.restaurante.RestauranteAPI.services.UsuarioService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +15,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -91,14 +93,24 @@ public class AuthController {
 
         String refreshToken = request.getRefreshToken();
 
-        if (!jwtService.isRefreshToken(refreshToken)) {
-            throw new BadCredentialsException("Token informado não é um refresh token");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new BadCredentialsException("Informe o refresh token");
         }
 
-        String email = jwtService.extrairUsername(refreshToken);
+        UserDetails userDetails;
 
-        UserDetails userDetails =
-                customUserDetailsService.loadUserByUsername(email);
+        try {
+            if (!jwtService.isRefreshToken(refreshToken)) {
+                throw new BadCredentialsException("Token informado não é um refresh token");
+            }
+
+            String email = jwtService.extrairUsername(refreshToken);
+            userDetails = customUserDetailsService.loadUserByUsername(email);
+
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
+            // token mal formado, assinatura errada, expirado ou de usuário inexistente
+            throw new BadCredentialsException("Refresh token inválido ou expirado");
+        }
 
         if (!jwtService.tokenValido(refreshToken, userDetails)) {
             throw new BadCredentialsException("Refresh token inválido ou expirado");
