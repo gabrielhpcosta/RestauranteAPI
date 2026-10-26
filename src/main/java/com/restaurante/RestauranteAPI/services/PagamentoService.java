@@ -34,6 +34,11 @@ public class PagamentoService {
         return calcularTotalConsumido(comandaId).subtract(calcularTotalPago(comandaId));
     }
 
+    public boolean existePagamentoConfirmado(Long comandaId) {
+        return pagamentoRepository.findByComanda_Id(comandaId).stream()
+                .anyMatch(p -> p.getStatus() == StatusPagamento.CONFIRMADO);
+    }
+
     private final PagamentoRepository pagamentoRepository;
     private final PagamentoMapper pagamentoMapper;
     private final ComandaRepository comandaRepository;

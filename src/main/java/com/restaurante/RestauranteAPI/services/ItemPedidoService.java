@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class ItemPedidoService {
 
@@ -27,13 +29,15 @@ public class ItemPedidoService {
     private final HistoricoStatusItemRepository historicoStatusItemRepository;
     private final UsuarioRepository usuarioRepository;
     private final MovimentacaoEstoqueService movimentacaoEstoqueService;
+    private final PagamentoService pagamentoService;
 
-    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository, MovimentacaoEstoqueService movimentacaoEstoqueService) {
+    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository, MovimentacaoEstoqueService movimentacaoEstoqueService, PagamentoService pagamentoService) {
         this.itemPedidoRepository = itemPedidoRepository;
         this.itemPedidoMapper = itemPedidoMapper;
         this.historicoStatusItemRepository = historicoStatusItemRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimentacaoEstoqueService = movimentacaoEstoqueService;
+        this.pagamentoService = pagamentoService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ItemPedidoService.class);
@@ -59,6 +63,16 @@ public class ItemPedidoService {
 
         if (statusNovo == StatusItemPedido.CANCELADO && (request.getMotivo() == null || request.getMotivo().isBlank())) {
             throw new BadRequestException("Informe o motivo do cancelamento");
+        }
+
+        if (statusNovo == StatusItemPedido.CANCELADO) {
+            BigDecimal valorItem = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
+            BigDecimal restante = pagamentoService.calcularRestante(item.getPedido().getComanda().getId());
+
+            if (restante.subtract(valorItem).compareTo(BigDecimal.ZERO) < 0) {
+                throw new ConflictException("Cancelar este item deixaria a conta paga a mais. "
+                        + "Estorne o pagamento antes (restante atual: R$ " + restante + ")");
+            }
         }
 
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(emailUsuarioAutenticado)

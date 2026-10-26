@@ -9,8 +9,6 @@ import com.restaurante.RestauranteAPI.exceptions.NotFound;
 import com.restaurante.RestauranteAPI.repositories.IngredienteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,14 +26,12 @@ public class IngredienteService {
 
     private static final Logger log = LoggerFactory.getLogger(IngredienteService.class);
 
-    @Cacheable("ingredientes")
     public List<IngredienteResponse> buscarTodos() {
         log.info("Buscando todos os ingredientes");
 
         return ingredienteRepository.findAll().stream().map(ingredienteMapper::toResponse).toList();
     }
 
-    @Cacheable(value = "ingrediente", key = "#id")
     public IngredienteResponse buscarPorId(Long id) {
         log.info("Buscando ingrediente pelo ID: {}", id);
 
@@ -44,7 +40,6 @@ public class IngredienteService {
         return ingredienteMapper.toResponse(ingrediente);
     }
 
-    @CacheEvict(value = {"ingredientes", "ingrediente"}, allEntries = true)
     public IngredienteResponse salvar(IngredienteRequest request) {
         log.info("Salvando ingrediente: {}", request.getNome());
 
@@ -61,7 +56,6 @@ public class IngredienteService {
         return ingredienteMapper.toResponse(ingredienteSalvo);
     }
 
-    @CacheEvict(value = {"ingredientes", "ingrediente"}, allEntries = true)
     public IngredienteResponse atualizar(Long id, IngredienteRequest request) {
         log.info("Atualizando ingrediente com o ID {}", id);
 
@@ -82,7 +76,6 @@ public class IngredienteService {
         return ingredienteMapper.toResponse(ingredienteAtualizado);
     }
 
-    @CacheEvict(value = {"ingredientes", "ingrediente"}, allEntries = true)
     public void desativar(Long id) {
         log.info("Desativando ingrediente com o ID {}", id);
 

@@ -45,8 +45,9 @@ public class ComandaController {
     }
 
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<ComandaResponse> cancelar(@PathVariable Long id, @Valid @RequestBody CancelarComandaRequest request) {
-        ComandaResponse comandaCancelada = comandaService.cancelar(id, request);
+    public ResponseEntity<ComandaResponse> cancelar(@PathVariable Long id, @Valid @RequestBody CancelarComandaRequest request,
+                                                    @AuthenticationPrincipal UserDetails usuario) {
+        ComandaResponse comandaCancelada = comandaService.cancelar(id, request, usuario.getUsername());
         return ResponseEntity.ok(comandaCancelada);
     }
 

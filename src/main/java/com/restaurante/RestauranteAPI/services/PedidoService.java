@@ -131,6 +131,7 @@ public class PedidoService {
                 .toList());
 
         BigDecimal total = itens.stream()
+                .filter(item -> item.getStatus() != StatusItemPedido.CANCELADO)
                 .map(item -> item.getPrecoUnitario()
                         .multiply(BigDecimal.valueOf(item.getQuantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

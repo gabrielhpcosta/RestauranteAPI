@@ -6,14 +6,19 @@ import com.restaurante.RestauranteAPI.dto.request.ComandaRequest;
 import com.restaurante.RestauranteAPI.dto.response.ComandaResponse;
 import com.restaurante.RestauranteAPI.entities.Cliente;
 import com.restaurante.RestauranteAPI.entities.Comanda;
+import com.restaurante.RestauranteAPI.entities.HistoricoStatusItem;
+import com.restaurante.RestauranteAPI.entities.ItemPedido;
 import com.restaurante.RestauranteAPI.entities.Mesa;
 import com.restaurante.RestauranteAPI.entities.Usuario;
 import com.restaurante.RestauranteAPI.enums.StatusComanda;
+import com.restaurante.RestauranteAPI.enums.StatusItemPedido;
 import com.restaurante.RestauranteAPI.exceptions.BadRequestException;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
 import com.restaurante.RestauranteAPI.repositories.ClienteRepository;
 import com.restaurante.RestauranteAPI.repositories.ComandaRepository;
+import com.restaurante.RestauranteAPI.repositories.HistoricoStatusItemRepository;
+import com.restaurante.RestauranteAPI.repositories.ItemPedidoRepository;
 import com.restaurante.RestauranteAPI.repositories.MesaRepository;
 import com.restaurante.RestauranteAPI.repositories.UsuarioRepository;
 import org.springframework.cache.annotation.CacheEvict;
@@ -38,11 +43,17 @@ public class ComandaService {
     private final UsuarioRepository usuarioRepository;
     private final Clock clock;
     private final PagamentoService pagamentoService;
+    private final ItemPedidoRepository itemPedidoRepository;
+    private final HistoricoStatusItemRepository historicoStatusItemRepository;
+    private final MovimentacaoEstoqueService movimentacaoEstoqueService;
 
 
     public ComandaService(ComandaRepository comandaRepository, ComandaMapper comandaMapper, MesaRepository mesaRepository,
                           ClienteRepository clienteRepository,
-                          UsuarioRepository usuarioRepository, Clock clock, PagamentoService pagamentoService) {
+                          UsuarioRepository usuarioRepository, Clock clock, PagamentoService pagamentoService,
+                          ItemPedidoRepository itemPedidoRepository,
+                          HistoricoStatusItemRepository historicoStatusItemRepository,
+                          MovimentacaoEstoqueService movimentacaoEstoqueService) {
         this.comandaRepository = comandaRepository;
         this.comandaMapper = comandaMapper;
         this.mesaRepository = mesaRepository;
@@ -50,6 +61,9 @@ public class ComandaService {
         this.usuarioRepository = usuarioRepository;
         this.clock = clock;
         this.pagamentoService = pagamentoService;
+        this.itemPedidoRepository = itemPedidoRepository;
+        this.historicoStatusItemRepository = historicoStatusItemRepository;
+        this.movimentacaoEstoqueService = movimentacaoEstoqueService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ComandaService.class);
@@ -125,10 +139,37 @@ public class ComandaService {
 
     @Transactional
     @CacheEvict(value = {"comandas", "comanda"}, allEntries = true)
-    public ComandaResponse cancelar(Long id, CancelarComandaRequest request) {
+    public ComandaResponse cancelar(Long id, CancelarComandaRequest request, String emailUsuarioAutenticado) {
         log.info("Cancelando comanda com ID {}", id);
 
         Comanda comanda = buscarComandaAberta(id);
+
+        if (pagamentoService.existePagamentoConfirmado(comanda.getId())) {
+            throw new ConflictException("A comanda tem pagamentos confirmados. Estorne os pagamentos antes de cancelar");
+        }
+
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(emailUsuarioAutenticado)
+                .orElseThrow(() -> new NotFound("Usuário não encontrado"));
+
+        // itens que ainda não ficaram prontos são cancelados e devolvem o estoque
+        for (ItemPedido item : itemPedidoRepository.findByPedido_Comanda_Id(comanda.getId())) {
+            StatusItemPedido statusAnterior = item.getStatus();
+
+            if (statusAnterior == StatusItemPedido.RECEBIDO || statusAnterior == StatusItemPedido.PREPARANDO) {
+                item.setStatus(StatusItemPedido.CANCELADO);
+                itemPedidoRepository.save(item);
+
+                movimentacaoEstoqueService.devolverEstoqueDoItem(item, usuario);
+
+                HistoricoStatusItem historico = new HistoricoStatusItem();
+                historico.setItemPedido(item);
+                historico.setStatusAnterior(statusAnterior);
+                historico.setStatusNovo(StatusItemPedido.CANCELADO);
+                historico.setAlteradoPor(usuario);
+                historico.setMotivo("Comanda cancelada: " + request.getMotivo());
+                historicoStatusItemRepository.save(historico);
+            }
+        }
 
         comanda.setStatus(StatusComanda.CANCELADA);
         comanda.setEncerradaEm(OffsetDateTime.now(clock));
@@ -143,6 +184,14 @@ public class ComandaService {
         log.info("Fechando comanda com o ID {}", id);
 
         Comanda comanda = buscarComandaAberta(id);
+
+        boolean temItemPendente = itemPedidoRepository.findByPedido_Comanda_Id(comanda.getId()).stream()
+                .anyMatch(item -> item.getStatus() != StatusItemPedido.ENTREGUE
+                        && item.getStatus() != StatusItemPedido.CANCELADO);
+
+        if (temItemPendente) {
+            throw new ConflictException("Ainda há itens que não foram entregues nem cancelados");
+        }
 
         BigDecimal restante = pagamentoService.calcularRestante(comanda.getId());
 
