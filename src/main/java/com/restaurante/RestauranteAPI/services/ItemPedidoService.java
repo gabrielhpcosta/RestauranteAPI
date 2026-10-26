@@ -26,12 +26,14 @@ public class ItemPedidoService {
     private final ItemPedidoMapper itemPedidoMapper;
     private final HistoricoStatusItemRepository historicoStatusItemRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MovimentacaoEstoqueService movimentacaoEstoqueService;
 
-    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository) {
+    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository, MovimentacaoEstoqueService movimentacaoEstoqueService) {
         this.itemPedidoRepository = itemPedidoRepository;
         this.itemPedidoMapper = itemPedidoMapper;
         this.historicoStatusItemRepository = historicoStatusItemRepository;
         this.usuarioRepository = usuarioRepository;
+        this.movimentacaoEstoqueService = movimentacaoEstoqueService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ItemPedidoService.class);
@@ -64,6 +66,10 @@ public class ItemPedidoService {
 
         item.setStatus(statusNovo);
         ItemPedido itemAtualizado = itemPedidoRepository.save(item);
+
+        if (statusNovo == StatusItemPedido.CANCELADO) {
+            movimentacaoEstoqueService.devolverEstoqueDoItem(itemAtualizado, usuario);
+        }
 
         HistoricoStatusItem historico = new HistoricoStatusItem();
         historico.setItemPedido(itemAtualizado);

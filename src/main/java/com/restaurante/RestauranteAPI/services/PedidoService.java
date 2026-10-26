@@ -30,8 +30,9 @@ public class PedidoService {
     private final UsuarioRepository usuarioRepository;
     private final PedidoMapper pedidoMapper;
     private final ItemPedidoMapper itemPedidoMapper;
+    private final MovimentacaoEstoqueService movimentacaoEstoqueService;
 
-    public PedidoService(PedidoRepository pedidoRepository, ItemPedidoRepository itemPedidoRepository, ComandaRepository comandaRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, PedidoMapper pedidoMapper, ItemPedidoMapper itemPedidoMapper) {
+    public PedidoService(PedidoRepository pedidoRepository, ItemPedidoRepository itemPedidoRepository, ComandaRepository comandaRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, PedidoMapper pedidoMapper, ItemPedidoMapper itemPedidoMapper, MovimentacaoEstoqueService movimentacaoEstoqueService) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.comandaRepository = comandaRepository;
@@ -39,6 +40,7 @@ public class PedidoService {
         this.usuarioRepository = usuarioRepository;
         this.pedidoMapper = pedidoMapper;
         this.itemPedidoMapper = itemPedidoMapper;
+        this.movimentacaoEstoqueService = movimentacaoEstoqueService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
@@ -70,7 +72,7 @@ public class PedidoService {
         pedido.setRegistradoPor(usuario);
         Pedido pedidoSalvo = pedidoRepository.save(pedido);
 
-        List<ItemPedido> itenSalvos = new ArrayList<>();
+        List<ItemPedido> itensSalvos = new ArrayList<>();
 
         for (ItemPedidoRequest itemRequest : request.getItens()) {
             Produto produto = buscarProdutoDisponivel(itemRequest.getProdutoId());
@@ -85,12 +87,15 @@ public class PedidoService {
 
             item.setStatus(StatusItemPedido.RECEBIDO);
 
-            itenSalvos.add(itemPedidoRepository.save(item));
+            ItemPedido itemSalvo = itemPedidoRepository.save(item);
+            movimentacaoEstoqueService.baixarEstoqueDoItem(itemSalvo, usuario);
+
+            itensSalvos.add(itemSalvo);
         }
 
-        log.info("Pedido {} registrado com {} itens", pedidoSalvo.getId(), itenSalvos.size());
+        log.info("Pedido {} registrado com {} itens", pedidoSalvo.getId(), itensSalvos.size());
 
-        return montarResponse(pedidoSalvo, itenSalvos);
+        return montarResponse(pedidoSalvo, itensSalvos);
     }
 
     private Comanda buscarComandaAberta(Long comandaId) {
