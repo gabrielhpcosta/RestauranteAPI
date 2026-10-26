@@ -5,28 +5,20 @@ import com.restaurante.RestauranteAPI.dto.request.UsuarioRequest;
 import com.restaurante.RestauranteAPI.dto.response.UsuarioResponse;
 import com.restaurante.RestauranteAPI.entities.Usuario;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
-import com.restaurante.RestauranteAPI.exceptions.ContaBloqueadaException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.restaurante.RestauranteAPI.repositories.UsuarioRepository;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
 @Service
 public class UsuarioService {
-
-    private static final int MAX_TENTATIVAS = 3;
-    private static final long MINUTOS_BLOQUEIO = 15;
-    private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
@@ -99,71 +91,10 @@ public class UsuarioService {
     public void deletar(Long id){
         log.info("Deletando usuario com ID {}", id);
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new NotFound("Usuáio não encontrado"));
+                .orElseThrow(() -> new NotFound("Usuário não encontrado"));
 
         usuario.setAtivo(false);
 
         usuarioRepository.save(usuario);
     }
-
-    //bloqueio do login
-
-    public Usuario buscarPorEmail(String email) {
-        return usuarioRepository.findByEmailIgnoreCase(email.trim())
-                .filter(usuario -> Boolean.TRUE.equals(usuario.getAtivo()))
-                .orElseThrow(() -> new BadCredentialsException("Email ou senha inválidos"));
-    }
-
-    //verificando se o usuario esta bloqueado e se ja passou o tempo
-    public void validarBloqueio(Usuario usuario) {
-        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
-            throw new BadCredentialsException("Email ou senha inválidos");
-        }
-        if (usuario.getBloqueadoAte() == null) {
-            return;
-        }
-
-        if (usuario.getBloqueadoAte().isAfter(LocalDateTime.now())) {
-            String ate = usuario.getBloqueadoAte().format(FORMATO_DATA);
-            throw new ContaBloqueadaException(
-                    "Conta bloqueada por excesso de tentativas. Tente novamente após " + ate);
-        }
-
-        usuario.setTentativasFalhas(0);
-        usuario.setBloqueadoAte(null);
-        usuarioRepository.save(usuario);
-    }
-
-    //Registra uma tentativa de login com senha incorreta cada vez que errar
-
-    public void registrarTentativaFalha(Usuario usuario) {
-        int tentativas = usuario.getTentativasFalhas() == null ? 0 : usuario.getTentativasFalhas();
-        tentativas++;
-
-        log.warn("Tentativa de login falhou para o usuario {} ({}/{})",
-                usuario.getEmail(), tentativas, MAX_TENTATIVAS);
-
-        if (tentativas >= MAX_TENTATIVAS) {
-            usuario.setTentativasFalhas(0);
-            usuario.setBloqueadoAte(LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEIO));
-            log.warn("Usuario {} bloqueado até {}", usuario.getEmail(), usuario.getBloqueadoAte());
-        } else {
-            usuario.setTentativasFalhas(tentativas);
-        }
-
-        usuarioRepository.save(usuario);
-    }
-
-    //zera o contador quando o login der certo
-    public void registrarLoginSucesso(Usuario usuario) {
-        if (usuario.getTentativasFalhas() != null && usuario.getTentativasFalhas() != 0
-                || usuario.getBloqueadoAte() != null) {
-            usuario.setTentativasFalhas(0);
-            usuario.setBloqueadoAte(null);
-            usuarioRepository.save(usuario);
-        }
-    }
-
-
-
 }

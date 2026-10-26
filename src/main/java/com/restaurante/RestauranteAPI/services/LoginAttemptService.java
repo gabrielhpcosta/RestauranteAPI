@@ -1,5 +1,6 @@
 package com.restaurante.RestauranteAPI.services;
 
+import com.restaurante.RestauranteAPI.exceptions.ContaBloqueadaException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,7 +25,7 @@ public class LoginAttemptService {
         }
 
         if (bloqueadoAte.isAfter(LocalDateTime.now())) {
-            throw new RuntimeException(
+            throw new ContaBloqueadaException(
                     "IP bloqueado. Tente novamente após " + bloqueadoAte
             );
         }

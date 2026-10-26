@@ -84,9 +84,32 @@ public class ClienteService {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new NotFound("Cliente não encontrado"));
 
+        String cpf = request.getCpf().replaceAll("[^0-9]", "");
+        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        clienteRepository.findByCpf(cpf)
+                .filter(outro -> !outro.getId().equals(id))
+                .ifPresent(outro -> { throw new ConflictException("CPF já cadastrado"); });
+
+        clienteRepository.findByEmailIgnoreCase(email)
+                .filter(outro -> !outro.getId().equals(id))
+                .ifPresent(outro -> { throw new ConflictException("E-mail já cadastrado"); });
+
+        String cepNovo = request.getCep().replaceAll("[^0-9]", "");
+        String cepAtual = cliente.getCep() == null ? "" : cliente.getCep().replaceAll("[^0-9]", "");
+
+        if (!cepNovo.equals(cepAtual)) {
+            ViaCepResponse endereco = viaCepService.buscarEndereco(request.getCep());
+            cliente.setCep(endereco.getCep());
+            cliente.setLogradouro(endereco.getLogradouro());
+            cliente.setBairro(endereco.getBairro());
+            cliente.setCidade(endereco.getLocalidade());
+            cliente.setUf(endereco.getUf());
+        }
+
         cliente.setNome(request.getNome());
-        cliente.setCpf(request.getCpf());
-        cliente.setEmail(request.getEmail());
+        cliente.setCpf(cpf);
+        cliente.setEmail(email);
         cliente.setTelefone(request.getTelefone());
 
         Cliente clienteAtualizado = clienteRepository.save(cliente);
