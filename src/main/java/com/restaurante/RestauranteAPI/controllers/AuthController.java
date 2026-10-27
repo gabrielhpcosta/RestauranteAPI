@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -79,11 +80,13 @@ public class AuthController {
                     new LoginResponse(accessToken, refreshToken)
             );
 
-        } catch (BadCredentialsException ex) {
+        } catch (BadCredentialsException | DisabledException ex) {
 
             loginAttemptService.registrarFalha(ip);
 
-            throw ex;
+            // mesma resposta para senha errada e usuário desativado,
+            // para não revelar quais emails existem no sistema
+            throw new BadCredentialsException("Email ou senha inválidos");
         }
     }
 
@@ -114,6 +117,10 @@ public class AuthController {
 
         if (!jwtService.tokenValido(refreshToken, userDetails)) {
             throw new BadCredentialsException("Refresh token inválido ou expirado");
+        }
+
+        if (!userDetails.isEnabled()) {
+            throw new BadCredentialsException("Usuário desativado");
         }
 
         String novoAccessToken =

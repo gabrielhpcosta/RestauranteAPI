@@ -71,7 +71,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (!jwtService.isRefreshToken(token)
+            // usuário desativado não autentica, mesmo com um token ainda válido
+            if (userDetails.isEnabled()
+                    && !jwtService.isRefreshToken(token)
                     && jwtService.tokenValido(token, userDetails)) {
 
                 UsernamePasswordAuthenticationToken authentication =
