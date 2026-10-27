@@ -16,10 +16,10 @@ import com.restaurante.RestauranteAPI.repositories.ComandaRepository;
 import com.restaurante.RestauranteAPI.repositories.ItemPedidoRepository;
 import com.restaurante.RestauranteAPI.repositories.PagamentoRepository;
 import com.restaurante.RestauranteAPI.repositories.UsuarioRepository;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -63,6 +63,13 @@ public class PagamentoService {
     public PagamentoResponse registrar(PagamentoRequest request, String emailUsuarioAutenticado) {
         log.info("Registrando pagamento de {} na comanda {}", request.getValor(), request.getComandaId());
 
+        // trava a comanda até o fim da transação: um segundo pagamento na mesma comanda
+        // espera este terminar e já enxerga o restante atualizado
+        Comanda comanda = comandaRepository.findByIdForUpdate(request.getComandaId())
+                .orElseThrow(() -> new NotFound("Comanda não encontrada"));
+
+        // a idempotência vem antes do status: repetir a requisição depois que a comanda
+        // fechou ainda devolve o pagamento existente
         Optional<Pagamento> existente =
                 pagamentoRepository.findByChaveIdempotencia(request.getChaveIdempotencia());
 
@@ -74,10 +81,11 @@ public class PagamentoService {
             return pagamentoMapper.toResponse(existente.get());
         }
 
-        Comanda comanda = buscarComandaAberta(request.getComandaId());
+        if (comanda.getStatus() != StatusComanda.ABERTA) {
+            throw new ConflictException("Só é possível pagar comandas abertas");
+        }
 
-        BigDecimal restante = calcularTotalConsumido(comanda.getId())
-                .subtract(calcularTotalPago(comanda.getId()));
+        BigDecimal restante = calcularRestante(comanda.getId());
 
         if (request.getValor().compareTo(restante) > 0) {
             throw new ConflictException("O valor excede o restante da conta: R$ " + restante);
@@ -131,16 +139,6 @@ public class PagamentoService {
         return pagamentoRepository.findByComanda_Id(comandaId).stream()
                 .map(pagamentoMapper::toResponse)
                 .toList();
-    }
-
-    private Comanda buscarComandaAberta(Long comandaId) {
-        Comanda comanda = comandaRepository.findById(comandaId)
-                .orElseThrow(() -> new NotFound("Comanda não encontrada"));
-
-        if (comanda.getStatus() != StatusComanda.ABERTA) {
-            throw new ConflictException("Só é possível pagar comandas abertas");
-        }
-        return comanda;
     }
 
     private BigDecimal calcularTotalConsumido(Long comandaId) {

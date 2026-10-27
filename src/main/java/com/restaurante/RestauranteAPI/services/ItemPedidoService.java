@@ -11,6 +11,7 @@ import com.restaurante.RestauranteAPI.enums.StatusItemPedido;
 import com.restaurante.RestauranteAPI.exceptions.BadRequestException;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
+import com.restaurante.RestauranteAPI.repositories.ComandaRepository;
 import com.restaurante.RestauranteAPI.repositories.HistoricoStatusItemRepository;
 import com.restaurante.RestauranteAPI.repositories.ItemPedidoRepository;
 import com.restaurante.RestauranteAPI.repositories.UsuarioRepository;
@@ -30,14 +31,16 @@ public class ItemPedidoService {
     private final UsuarioRepository usuarioRepository;
     private final MovimentacaoEstoqueService movimentacaoEstoqueService;
     private final PagamentoService pagamentoService;
+    private final ComandaRepository comandaRepository;
 
-    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository, MovimentacaoEstoqueService movimentacaoEstoqueService, PagamentoService pagamentoService) {
+    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ItemPedidoMapper itemPedidoMapper, HistoricoStatusItemRepository historicoStatusItemRepository, UsuarioRepository usuarioRepository, MovimentacaoEstoqueService movimentacaoEstoqueService, PagamentoService pagamentoService, ComandaRepository comandaRepository) {
         this.itemPedidoRepository = itemPedidoRepository;
         this.itemPedidoMapper = itemPedidoMapper;
         this.historicoStatusItemRepository = historicoStatusItemRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimentacaoEstoqueService = movimentacaoEstoqueService;
         this.pagamentoService = pagamentoService;
+        this.comandaRepository = comandaRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ItemPedidoService.class);
@@ -66,8 +69,15 @@ public class ItemPedidoService {
         }
 
         if (statusNovo == StatusItemPedido.CANCELADO) {
+            Long comandaId = item.getPedido().getComanda().getId();
+
+            // mesmo lock do PagamentoService.registrar: um pagamento na mesma comanda
+            // espera este cancelamento terminar (e vice-versa), então o restante não muda no meio
+            comandaRepository.findByIdForUpdate(comandaId)
+                    .orElseThrow(() -> new NotFound("Comanda não encontrada"));
+
             BigDecimal valorItem = item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()));
-            BigDecimal restante = pagamentoService.calcularRestante(item.getPedido().getComanda().getId());
+            BigDecimal restante = pagamentoService.calcularRestante(comandaId);
 
             if (restante.subtract(valorItem).compareTo(BigDecimal.ZERO) < 0) {
                 throw new ConflictException("Cancelar este item deixaria a conta paga a mais. "
