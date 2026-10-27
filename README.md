@@ -20,7 +20,6 @@ API REST para gestão de restaurante: da abertura da comanda na mesa ao fechamen
 - [Endpoints](#endpoints)
 - [Tecnologias](#tecnologias)
 - [Como executar](#como-executar)
-- [Próximos passos](#próximos-passos)
 - [Autor](#autor)
 
 ## Visão geral
@@ -152,15 +151,6 @@ No próprio Swagger, faça o login em `POST /auth/login`, copie o `accessToken`,
    ```
 
 5. A API sobe em `http://localhost:8082`. Faça o primeiro login em `POST /auth/login` com o email e a senha do administrador.
-
-## Próximos passos
-
-- [ ] Testes unitários e de integração
-- [ ] CI no GitHub Actions rodando os testes a cada push
-- [x] Botão "Authorize" no Swagger para testar as rotas protegidas por lá
-- [ ] Migrações de banco com Flyway
-- [ ] BrasilAPI como alternativa quando o ViaCEP estiver fora do ar
-- [ ] Pagamento por PIX em sandbox, com confirmação por webhook
 
 ## Autor
 
