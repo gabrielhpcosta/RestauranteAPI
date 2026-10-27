@@ -94,6 +94,8 @@ Para usar as rotas protegidas, faça login em `POST /auth/login` e envie o `acce
 Authorization: Bearer <accessToken>
 ```
 
+No próprio Swagger, faça o login em `POST /auth/login`, copie o `accessToken`, clique em **Authorize** e cole o token. A partir daí, todas as rotas protegidas podem ser testadas pela página.
+
 ## Tecnologias
 
 - **Java 17** e **Spring Boot 4.1**
@@ -155,7 +157,7 @@ Authorization: Bearer <accessToken>
 
 - [ ] Testes unitários e de integração
 - [ ] CI no GitHub Actions rodando os testes a cada push
-- [ ] Botão "Authorize" no Swagger para testar as rotas protegidas por lá
+- [x] Botão "Authorize" no Swagger para testar as rotas protegidas por lá
 - [ ] Migrações de banco com Flyway
 - [ ] BrasilAPI como alternativa quando o ViaCEP estiver fora do ar
 - [ ] Pagamento por PIX em sandbox, com confirmação por webhook

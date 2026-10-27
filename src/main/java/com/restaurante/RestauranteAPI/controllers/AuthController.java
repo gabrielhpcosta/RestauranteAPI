@@ -8,6 +8,7 @@ import com.restaurante.RestauranteAPI.dto.response.LoginResponse;
 import com.restaurante.RestauranteAPI.services.LoginAttemptService;
 import com.restaurante.RestauranteAPI.services.UsuarioService;
 import io.jsonwebtoken.JwtException;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
+@SecurityRequirements()
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
