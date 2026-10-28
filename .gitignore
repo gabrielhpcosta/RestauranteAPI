@@ -4,6 +4,7 @@ target/
 logs/
 /postman
 .postman/
+CLAUDE.md
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
