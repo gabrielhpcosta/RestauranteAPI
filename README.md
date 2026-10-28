@@ -7,8 +7,7 @@ API REST para gestão de restaurante: da abertura da comanda na mesa ao fechamen
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker-compose-2496ED)
 
-<!-- TODO: salve um print do Swagger em docs/swagger.png e descomente a linha abaixo. -->
-<!-- ![Swagger da API](docs/swagger.png) -->
+![Swagger da API](docs/swagger.png)
 
 ## Sumário
 
