@@ -4,6 +4,7 @@ import com.restaurante.RestauranteAPI.config.mappers.UsuarioMapper;
 import com.restaurante.RestauranteAPI.dto.request.UsuarioRequest;
 import com.restaurante.RestauranteAPI.dto.response.UsuarioResponse;
 import com.restaurante.RestauranteAPI.entities.Usuario;
+import com.restaurante.RestauranteAPI.enums.Users;
 import com.restaurante.RestauranteAPI.exceptions.ConflictException;
 import com.restaurante.RestauranteAPI.exceptions.NotFound;
 import org.slf4j.Logger;
@@ -72,6 +73,13 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFound("Usuario não encontrado"));
 
+        // confere antes de mexer no usuário: a regra olha o estado atual (ADMIN e ativo)
+        boolean deixaDeSerAdminAtivo = request.getRole() != Users.ADMIN
+                || !Boolean.TRUE.equals(request.getAtivo());
+        if (deixaDeSerAdminAtivo) {
+            garantirQueNaoEOUltimoAdmin(usuario);
+        }
+
         usuario.setNome(request.getNome());
         String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
         usuarioRepository.findByEmailIgnoreCase(email)
@@ -93,8 +101,19 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFound("Usuário não encontrado"));
 
+        garantirQueNaoEOUltimoAdmin(usuario);
+
         usuario.setAtivo(false);
 
         usuarioRepository.save(usuario);
+    }
+
+    // sem nenhum ADMIN ativo, ninguém mais consegue entrar para cadastrar ou reativar usuários
+    private void garantirQueNaoEOUltimoAdmin(Usuario usuario) {
+        boolean eAdminAtivo = usuario.getRole() == Users.ADMIN && Boolean.TRUE.equals(usuario.getAtivo());
+
+        if (eAdminAtivo && usuarioRepository.countByRoleAndAtivoTrue(Users.ADMIN) <= 1) {
+            throw new ConflictException("Não é possível desativar ou rebaixar o último administrador ativo");
+        }
     }
 }
