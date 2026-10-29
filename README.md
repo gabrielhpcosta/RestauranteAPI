@@ -6,6 +6,7 @@ API REST para gestão de restaurante: da abertura da comanda na mesa ao fechamen
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker-compose-2496ED)
+![CI](https://github.com/gabrielhpcosta/RestauranteAPI/actions/workflows/ci.yml/badge.svg)
 
 ![Swagger da API](docs/swagger.png)
 
