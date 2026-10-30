@@ -16,4 +16,6 @@ public class UsuarioResponse {
 
     private Users role;
 
+    private Boolean ativo;
+
 }
